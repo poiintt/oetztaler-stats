@@ -6,23 +6,11 @@ const url = 'https://www.datasport.com'
 async function search(raceNumber: string, startNumber: string) {
   try {
     const org = new URLSearchParams({
-      // mappID: '',
-      // order: '1',
-      // format: 'medium',
-      // pos: '-1',
-      // fulltextsearch: '',
       bib: startNumber,
-      // name: '',
-      // land: '',
-      // place: '',
-      // team: '',
-      // kat: '-1',
-      // from: '1',
-      // startrow: '0'
     }).toString()
 
-    const f = encrypt(org)
-    const payload = encodeURIComponent(f);
+    const encrypted = encrypt(org)
+    const payload = encodeURIComponent(encrypted);
     const body = `payload=${payload}`
 
     const search = await axios.post(`${url}/live/ajax/search/?racenr=${raceNumber}`, body)
@@ -46,7 +34,7 @@ async function start(raceNumber: string, startNumbers: string[]) {
     const name = r.data[0].aCells[3].match(innerHtml)[0].trim()
 
     const data = r.marker?.map(m => ({ distance: parseFloat(m.meters.replace(`'`,'.')), speed: m.kmh, number: m.bib, time: m.time }))[0]
-    return { name, ...data, update: r.update }
+    return { name, ...data, update: r.update.replace('Aktualisiert: ', '') }
   }
   )
   table.sort((a,b) => b.distance - a.distance)
