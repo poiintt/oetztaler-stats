@@ -1,47 +1,95 @@
 import { decrypt, encrypt } from './datasport'
 import axios from 'axios'
+import type { SearchResult } from './types'
 
-const url = 'https://www.datasport.com'
+const baseURL = 'https://www.datasport.com'
 
-async function search(raceNumber: string, startNumber: string) {
+/**
+ * request the athlete data
+ * @param raceNumber id of the race
+ * @param startNumber athlete start number
+ * @returns the search result
+ */
+async function search(raceNumber: string, startNumber: string): Promise<SearchResult> {
   try {
-    const org = new URLSearchParams({
+    const params = new URLSearchParams({
       bib: startNumber,
     }).toString()
 
-    const encrypted = encrypt(org)
-    const payload = encodeURIComponent(encrypted);
+    // datasport is weird
+    // the parms need to be encrypted
+    const encrypted = encrypt(params)
+    const payload = encodeURIComponent(encrypted)
     const body = `payload=${payload}`
 
-    const search = await axios.post(`${url}/live/ajax/search/?racenr=${raceNumber}`, body)
+    const result = await axios.post<string>(`/live/ajax/search/?racenr=${raceNumber}`, body, { baseURL })
 
-    const result = decrypt(search.data);
-    const json = JSON.parse(result)
-    return json;
+    // the result is encrypted by the server and needs to be encrypted here
+    const search = decrypt(result.data)
+    const json = JSON.parse(search) as SearchResult
+    return json
   } catch (error) {
     console.error(error)
   }
 }
-async function start(raceNumber: string, startNumbers: string[]) {
 
-  const promises = startNumbers.map<any>(startNumber => search(raceNumber, startNumber));
+/**
+ * process the search results
+ * @param searchResults 
+ * @returns table data
+ */
+function getTable(searchResults: SearchResult[]) {
+  const getFloat = (value: string) => parseFloat(value.replace(`'`, '.'))
+  const distanceFirstAthlete = getFloat(searchResults[0].marker[0].meters)
+
+  const table = searchResults.map(r => {
+    // get the athletes name
+    const innerHtml = /(?<=\<a.*?\>).*?(?=\<\/a\>)/
+    const name = r.data[0].aCells[3].toString().match(innerHtml)[0].trim()
+
+    const update = r.update.replace('Aktualisiert: ', '')
+
+    const data = r.marker?.map(m => {
+      const distance = getFloat(m.meters)
+
+      // calculate the differnce between the first given athlete and each other athlete
+      const diff = parseFloat((distance - distanceFirstAthlete).toFixed(3))
+      return {
+        distance,
+        diff,
+        speed: m.kmh,
+        number: m.bib,
+        time: m.time
+      }
+    })[0]
+    return { name, ...data, update }
+  })
+
+  // sort athletes desc by distance
+  table.sort((a, b) => b.distance - a.distance)
+  return table
+}
+
+/**
+ * load all search results, process and display them
+ */
+async function start(raceNumber: string, startNumbers: string[]) {
   console.time('requests /search')
-  const allResults = await Promise.all(promises);
+  const promises = startNumbers.map(startNumber => search(raceNumber, startNumber))
+  const searchResults = await Promise.all(promises)
   console.timeEnd('requests /search')
 
-  const table = allResults.map(r => {
-    const innerHtml = /(?<=\<a.*?\>).*?(?=\<\/a\>)/
-    const name = r.data[0].aCells[3].match(innerHtml)[0].trim()
+  const table = getTable(searchResults)
 
-    const data = r.marker?.map(m => ({ distance: parseFloat(m.meters.replace(`'`,'.')), speed: m.kmh, number: m.bib, time: m.time }))[0]
-    return { name, ...data, update: r.update.replace('Aktualisiert: ', '') }
-  }
-  )
-  table.sort((a,b) => b.distance - a.distance)
+  // output the table
   console.table(table)
+
+  for (const starter of table) {
+    console.log(`${starter.name}: ${starter.distance} km (${starter.diff} km) ${starter.speed} km/h`)
+  }
 }
 
 const raceNumber = process.argv[2]
 const startNumbers = process.argv.slice(3)
 
-start(raceNumber, startNumbers);
+start(raceNumber, startNumbers)
