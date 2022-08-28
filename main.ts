@@ -17,20 +17,18 @@ async function search(raceNumber: string, startNumber: string): Promise<SearchRe
 
   // datasport is weird
   // the parms need to be encrypted
-  const encryptLog = `encrypt request for startNumber ${startNumber}`
-  console.time(encryptLog)
   const encrypted = encrypt(params)
-  console.timeEnd(encryptLog)
 
   const payload = encodeURIComponent(encrypted)
   const body = `payload=${payload}`
+  
+  const requestLog = `request for startNumber ${startNumber}`
+  console.time(requestLog)
   const result = await axios.post<string>(`/live/ajax/search/?racenr=${raceNumber}`, body, { baseURL })
+  console.timeEnd(requestLog)
 
   // the result is encrypted by the server and needs to be encrypted here
-  const decryptLog = `decrypt result for startNumber ${startNumber}`
-  console.time(decryptLog)
   const search = decrypt(result.data)
-  console.timeEnd(decryptLog)
 
   const json = JSON.parse(search) as SearchResult
   return json
@@ -77,12 +75,10 @@ function getTable(searchResults: SearchResult[]) {
  * load all search results, process and display them
  */
 async function start(raceNumber: string, startNumbers: string[]) {
-  console.time('requests /search')
   const promises = startNumbers.map(startNumber => search(raceNumber, startNumber))
 
   try {
     const searchResults = await Promise.all(promises)
-    console.timeEnd('requests /search')
 
     const table = getTable(searchResults)
 
