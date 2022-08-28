@@ -1,0 +1,3 @@
+```shell
+ts-node main.ts <raceNumber> <startNumber1> <startNumber2> ...
+```
