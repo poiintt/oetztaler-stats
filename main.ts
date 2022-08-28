@@ -11,26 +11,29 @@ const baseURL = 'https://www.datasport.com'
  * @returns the search result
  */
 async function search(raceNumber: string, startNumber: string): Promise<SearchResult> {
-  try {
-    const params = new URLSearchParams({
-      bib: startNumber,
-    }).toString()
+  const params = new URLSearchParams({
+    bib: startNumber,
+  }).toString()
 
-    // datasport is weird
-    // the parms need to be encrypted
-    const encrypted = encrypt(params)
-    const payload = encodeURIComponent(encrypted)
-    const body = `payload=${payload}`
+  // datasport is weird
+  // the parms need to be encrypted
+  const encryptLog = `encrypt request for startNumber ${startNumber}`
+  console.time(encryptLog)
+  const encrypted = encrypt(params)
+  console.timeEnd(encryptLog)
 
-    const result = await axios.post<string>(`/live/ajax/search/?racenr=${raceNumber}`, body, { baseURL })
+  const payload = encodeURIComponent(encrypted)
+  const body = `payload=${payload}`
+  const result = await axios.post<string>(`/live/ajax/search/?racenr=${raceNumber}`, body, { baseURL })
 
-    // the result is encrypted by the server and needs to be encrypted here
-    const search = decrypt(result.data)
-    const json = JSON.parse(search) as SearchResult
-    return json
-  } catch (error) {
-    console.error(error)
-  }
+  // the result is encrypted by the server and needs to be encrypted here
+  const decryptLog = `decrypt result for startNumber ${startNumber}`
+  console.time(decryptLog)
+  const search = decrypt(result.data)
+  console.timeEnd(decryptLog)
+
+  const json = JSON.parse(search) as SearchResult
+  return json
 }
 
 /**
@@ -45,7 +48,7 @@ function getTable(searchResults: SearchResult[]) {
   const table = searchResults.map(r => {
     // get the athletes name
     const innerHtml = /(?<=\<a.*?\>).*?(?=\<\/a\>)/
-    const name = r.data[0].aCells[3].toString().match(innerHtml)[0].trim()
+    const name = r.data[0].aCells[3].toString().match(innerHtml)?.[0].trim()
 
     const update = r.update.replace('Aktualisiert: ', '')
 
@@ -76,16 +79,21 @@ function getTable(searchResults: SearchResult[]) {
 async function start(raceNumber: string, startNumbers: string[]) {
   console.time('requests /search')
   const promises = startNumbers.map(startNumber => search(raceNumber, startNumber))
-  const searchResults = await Promise.all(promises)
-  console.timeEnd('requests /search')
 
-  const table = getTable(searchResults)
+  try {
+    const searchResults = await Promise.all(promises)
+    console.timeEnd('requests /search')
 
-  // output the table
-  console.table(table)
+    const table = getTable(searchResults)
 
-  for (const starter of table) {
-    console.log(`${starter.name}: ${starter.distance} km (${starter.diff} km) ${starter.speed} km/h`)
+    // output the table
+    console.table(table)
+
+    for (const starter of table) {
+      console.log(`${starter.name}: ${starter.distance} km (${starter.diff} km) ${starter.speed} km/h`)
+    }
+  } catch (error) {
+    console.error(error)
   }
 }
 

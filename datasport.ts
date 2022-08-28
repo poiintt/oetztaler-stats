@@ -5,17 +5,11 @@ const key = enc.Base64.parse('UHZ7Ivre3VQZz6OcueH7uw==')
 const iv = enc.Base64.parse('ZPIU5yq6wJzBQXLDlH02/g==')
 
 export function encrypt(payload: string): string {
-  console.time('encrypt')
   const encrypted = AES.encrypt(payload, key, { iv })
-  const result = encrypted.toString()
-  console.timeEnd('encrypt')
-  return result
+  return encrypted.toString()
 }
 
 export function decrypt(payload: string): string {
-  console.time('decrypt')
   const decrypted = AES.decrypt(payload, key, { iv })
-  const result = decrypted.toString(enc.Utf8)
-  console.timeEnd('decrypt')
-  return result
+  return decrypted.toString(enc.Utf8)
 }
