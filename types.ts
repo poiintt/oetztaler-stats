@@ -1,6 +1,6 @@
 export interface SearchResult {
   dataCell: string[],
-  eventstatus: 'live',
+  eventstatus: 'live' | '',
   marker: [
     {
       posbez: 'Letzte Zeit',
@@ -15,7 +15,7 @@ export interface SearchResult {
       name: string,
       long: number
     }
-  ],
+  ] | [],
   dataCellS: [],
   track: number,
   dt: number,
@@ -32,5 +32,5 @@ export interface SearchResult {
   ],
   paging: boolean,
   update: string,
-  statusinfo: 1
+  statusinfo: 1 | 0
 }

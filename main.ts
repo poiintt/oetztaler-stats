@@ -41,7 +41,7 @@ async function search(raceNumber: string, startNumber: string): Promise<SearchRe
  */
 function getTable(searchResults: SearchResult[]) {
   const getFloat = (value: string) => parseFloat(value.replace(`'`, '.'))
-  const distanceFirstAthlete = getFloat(searchResults[0].marker[0].meters)
+  const distanceFirstAthlete = getFloat(searchResults[0].marker[0]?.meters ?? '0')
 
   const table = searchResults.map(r => {
     // get the athletes name
