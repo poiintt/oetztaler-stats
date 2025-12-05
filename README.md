@@ -3,7 +3,7 @@ get live race stats from datasport.com for multiple startNumbers
 results are displayed in a table
 
 ```shell
-npx ts-node main.ts <raceNumber> <startNumber1> <startNumber2> ...
+bun run main.ts <raceNumber> <startNumber1> <startNumber2> ...
 ```
 
 output:
